@@ -10,8 +10,7 @@ Requirements
 Usage
 ====
  - Blocking interface
-
- to write
+ see test.lua .
 
  - Async interface (target on luvit)
 
