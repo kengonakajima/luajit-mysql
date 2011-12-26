@@ -84,129 +84,164 @@ ffi.cdef[[
 
       unsigned int mysql_num_fields(MYSQL_RESwrap_t *res);
 
-]]
+      void mysql_close(MYSQLwrap_t *sock);
 
-local printLog = false
-local log = function(...) if printLog then print(...) end end
+      unsigned long * mysql_fetch_lengths(MYSQL_RESwrap_t *result);
+
+      typedef void MYSQL_TIMEwrap_t ;
+      int str_to_time(const char *str,unsigned int length, MYSQL_TIMEwrap_t *l_time, int *warning);
+      unsigned long long TIME_to_ulonglong_time(const MYSQL_TIMEwrap_t *);
+      int str_to_datetime(const char *str, unsigned int length, MYSQL_TIMEwrap_t *l_time, unsigned int flags, int *was_cut);
+      unsigned long long TIME_to_ulonglong_datetime(const MYSQL_TIMEwrap_t *);
+      unsigned long long TIME_to_ulonglong_date(const MYSQL_TIMEwrap_t *);
+      unsigned long long TIME_to_ulonglong_time(const MYSQL_TIMEwrap_t *);
+      unsigned long long TIME_to_ulonglong(const MYSQL_TIMEwrap_t *);
+
+]]
 
 
 local clib = ffi.load( "libmysqlclient.dylib", true )                       
+assert(clib)
 
-
-local mysql = ffi.cast( "MYSQLwrap_t*",ffi.C.malloc( 1024*1024 )) -- arbitrary bigger size
-log("mysql malloc:",mysql)
-
-local ret = ffi.C.mysql_init(mysql)
-log("mysql_init:", ret )
-
-local conn = ffi.C.mysql_real_connect( mysql, "127.0.0.1", "mysql", "", "test", 3306,NULL,0 )
-local nullpo = ffi.cast( "MYSQLwrap_t*",0)
-
-if conn == nullpo then
-   local err = ffi.string(ffi.C.mysql_error(mysql))
-   print("mysql_real_connect: err:", err )
-   error("fatal")
-end
-
-log("mysql_real_connect conn:", conn )
-
-function doall()
-   local ret = ffi.C.mysql_query( conn, "drop table if exists people" )
-   assert(ret==0)
-   log("mysql_query drop: ", ret )
-
-   ret = ffi.C.mysql_query( conn, "create table people ( name char(100), age int, email char(100) )" )
-   log("mysql_query create: ", ret )
-   assert(ret==0)
-
-
-   ret = ffi.C.mysql_query( conn, "insert into people set name='yamada', age=3, email='yamada@gmail.com' " )
-   log("mysql_query insert: ", ret )
-   if ret ~= 0 then
-      log( ffi.string(ffi.C.mysql_error(mysql) ))
-      error("fatal")
+local mysql_is_num_types =
+   function(t)
+      return ( t == ffi.C.MYSQL_TYPE_DECIMAL or t == ffi.C.MYSQL_TYPE_TINY or t == ffi.C.MYSQL_TYPE_SHORT or t == ffi.C.MYSQL_TYPE_LONG or t == ffi.C.MYSQL_TYPE_FLOAT or t == ffi.C.MYSQL_TYPE_DOUBLE )
+   end
+local mysql_is_string_types =
+   function(t)
+      return ( t == ffi.C.MYSQL_TYPE_STRING or t == ffi.C.MYSQL_TYPE_VAR_STRING )
+   end
+local mysql_is_blob_types =
+   function(t)
+      return ( t == ffi.C.MYSQL_TYPE_BLOB or t == ffi.C.MYSQL_TYPE_TINY_BLOB or t == ffi.C.MYSQL_TYPE_MEDIUM_BLOB or t == ffi.C.MYSQL_TYPE_LONG_BLOB )
    end
 
-   ret = ffi.C.mysql_query( conn, "insert into people set name='satou', age=10, email='satou@gmail.com' " )
-   log("mysql_query insert: ", ret )
-   if ret ~= 0 then
-      log( ffi.string(ffi.C.mysql_error(mysql) ))   
-      error("fatal")
+-- 19830905132800ULL  というようなFFIの値。 
+local time_ull_to_table =
+   function(ffiull)
+      local n = tonumber(ffiull)
+      return { sec = math.floor(n)%100,
+               min = math.floor(n/100)%100,
+               hour = math.floor(n/100/100)%100,
+               day = math.floor(n/100/100/100)%100,
+               month = math.floor(n/100/100/100/100)%100,
+               year = math.floor(n/100/100/100/100/100)%10000 }
    end
 
 
-   ret = ffi.C.mysql_query( conn, "select name, age, email from people" )
-   log("mysql_query select:", ret )
-   if ret ~= 0 then
-      log( ffi.string(ffi.C.mysql_error(mysql) ))   
-      error("fatal")
-   end
 
-   local res = ffi.C.mysql_store_result(mysql)
-   log("mysql_store_result:",res)
-
-   nullpo = ffi.cast( "MYSQL_RESwrap_t *", 0 )
-   if res == nullpo then
-      log( ffi.string(ffi.C.mysql_error(mysql) ))      
-      error("store_result must success")
-   end
-
-   local nrows = tonumber(ffi.C.mysql_num_rows( res ))
-   log( "mysql_num_rows:", nrows )
-   if nrows ~= 2 then
-      log( ffi.string(ffi.C.mysql_error(mysql) ))      
-      error("numrows must be 2")
-   end
-
-   local nfields = tonumber(ffi.C.mysql_num_fields( res ) )
-   log("mysql_num_fields:", nfields)
-   if nfields ~= 3 then
-      log( ffi.string(ffi.C.mysql_error(mysql) ))      
-      error("numfields must be 3")
-   end
-
-   local fldtbl = {}
-   
-   local flds = ffi.C.mysql_fetch_fields(res)
-   log("mysql_fetch_fields:", flds )   
-   for i=0,nfields-1 do
-      local f = { name = ffi.string(flds[i].name), type = tonumber(flds[i].type) } 
-      table.insert( fldtbl, f )
---      log( "name:", f.name, "type:", f.type )
-   end
-
-   local restbl={}
-   for i=1,nrows do
-      local row = ffi.C.mysql_fetch_row( res )
-
-      log( "fetch loop:", i, " name:", ffi.string(row[0] ), " age:", tonumber(ffi.string(row[1]) ), " email:", ffi.string(row[2]) )
-      
-      local rowtbl={}
-      for i=1,nfields do
-         local fdef = fldtbl[i]
-         if fdef.type == ffi.C.MYSQL_TYPE_LONG then
-            rowtbl[ fdef.name ] = tonumber( ffi.string( row[i-1] ) )
-         elseif fdef.type == ffi.C.MYSQL_TYPE_STRING then
-            rowtbl[ fdef.name ] = ffi.string( row[i-1] )
-         else
-            error( string.format( "type %d is not implemented", fdef.type ) )
-         end
+local mysql_query =
+   function( self, qstr )
+      self:log("mysql_query:", qstr)
+      ret = ffi.C.mysql_query( self.conn, qstr )
+      if ret ~= 0 then
+         error( "fatal:" .. ffi.string(ffi.C.mysql_error(self.mysql)))
       end
-      table.insert(restbl, rowtbl)
+      local res = ffi.C.mysql_store_result(self.mysql)
+      local nullpo = ffi.cast( "MYSQL_RESwrap_t *", 0 )
+      if res == nullpo then
+         return nil
+      end
+      local nrows = tonumber(ffi.C.mysql_num_rows( res ))
+      local nfields = tonumber(ffi.C.mysql_num_fields( res ) )
+
+      local fldtbl = {}      
+      local flds = ffi.C.mysql_fetch_fields(res)
+      for i=0,nfields-1 do
+         local f = { name = ffi.string(flds[i].name), type = tonumber(flds[i].type) } 
+         table.insert( fldtbl, f )
+      end
+
+
+      local restbl={}
+
+      for i=1,nrows do
+         local row = ffi.C.mysql_fetch_row( res )
+         local lens = ffi.C.mysql_fetch_lengths( res )
+         local rowtbl={}
+         for i=1,nfields do
+            local fdef = fldtbl[i]
+            if row[i-1] == ffi.cast( "char*",0) then
+               rowtbl[ fdef.name ] = nil
+            elseif mysql_is_num_types(fdef.type) then
+               rowtbl[ fdef.name ] = tonumber( ffi.string( row[i-1] ) )
+            elseif mysql_is_string_types(fdef.type) then
+               rowtbl[ fdef.name ] = ffi.string( row[i-1] )
+            elseif mysql_is_blob_types(fdef.type) then
+               rowtbl[ fdef.name ] = ffi.string( row[i-1], lens[i-1] )
+            elseif fdef.type == ffi.C.MYSQL_TYPE_TIMESTAMP or fdef.type == ffi.C.MYSQL_TYPE_DATETIME or fdef.type == ffi.C.MYSQL_TYPE_DATE or fdef.type == ffi.C.MYSQL_TYPE_TIME then 
+               local w = ffi.new("int[1]",{})
+               local datestr = ffi.string( row[i-1] )
+               local llt,r
+               if fdef.type == ffi.C.MYSQL_TYPE_TIME then
+                  r = ffi.C.str_to_time( datestr, string.len(datestr), self.timeStruct, w )
+                  llt = ffi.C.TIME_to_ulonglong( self.timeStruct )
+               else
+                  r = ffi.C.str_to_datetime( datestr, string.len(datestr), self.timeStruct, 0, w ) --	1983-09-05 13:28:00
+                  if fdef.type == ffi.C.MYSQL_TYPE_DATE then
+                     llt = ffi.C.TIME_to_ulonglong_date( self.timeStruct )
+                     llt = llt * 100 * 100 * 100
+                  elseif fdef.type == ffi.C.MYSQL_TYPE_TIMESTAMP or fdef.type == ffi.C.MYSQL_TYPE_DATETIME then
+                     llt = ffi.C.TIME_to_ulonglong( self.timeStruct )
+                  end
+               end
+               rowtbl[ fdef.name ] = time_ull_to_table(llt)
+            else
+               error( string.format( "type %d is not implemented", fdef.type ) )
+            end
+         end
+         table.insert(restbl, rowtbl)         
+      end
+
+      ffi.C.mysql_free_result(res)
+   
+      return restbl
    end
 
-   for i,v in ipairs(restbl) do
-      print("restbl loop:", i, v.name, v.age, v.email )
+
+local mysql_connect =
+   function( self, host, user, password, db )
+      local out={}
+      local mysql = ffi.cast( "MYSQLwrap_t*",ffi.C.malloc( 1024*1024 ))
+      local ret = ffi.C.mysql_init(mysql)
+      self:log("mysql_init:", ret )
+      local conn = ffi.C.mysql_real_connect( mysql, host, user, password, db, 3306,NULL,0 )
+      local nullpo = ffi.cast( "MYSQLwrap_t*",0)
+      if conn == nullpo then
+         error( "fatal:" .. ffi.string(ffi.C.mysql_error(mysql)) )
+         return nil
+      end
+      
+      local timeStruct = ffi.cast( "MYSQL_TIMEwrap_t*",ffi.C.malloc(1024))
+      
+      out.mysql = mysql
+      out.conn = conn
+      out.query = mysql_query
+      out.execute = mysql_query -- from luasql
+      out.log = self.log
+      out.doLog = false
+      out.toggleLog = function(self,v) self.doLog = v end
+      out.close = function(self) ffi.C.mysql_close( self.conn ) end
+      out.timeStruct = timeStruct
+      return out
+   end      
+
+local mysql_escape =
+   function( self, orig )
+      if not orig then return nil end
+      local strsz = string.len(orig) * 2 + 1 + 1
+      local cdata = ffi.new( "char[" .. strsz .. "]", {})
+      local ret = ffi.C.mysql_escape_string(cdata, orig, string.len(orig) )
+      return ffi.string( cdata, ret )      
    end
 
-   ffi.C.mysql_free_result(res)
+local _log = function(self,...) if self.doLog then print(...) end end
 
-end
+--selfTest()
 
-local N=100
-local st = os.clock()
-for i=1,N do
-   doall()
-end
-local et = os.clock()
-print( "time:",(et-st), " avg:", N/(et-st), " q/CPUsec" )
+return {
+   connect = mysql_connect,
+   escape = mysql_escape,
+   log = _log,
+   doLog = false
+}
