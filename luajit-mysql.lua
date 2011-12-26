@@ -116,9 +116,9 @@ local mysql_is_blob_types =
       return ( t == ffi.C.MYSQL_TYPE_BLOB or t == ffi.C.MYSQL_TYPE_TINY_BLOB or t == ffi.C.MYSQL_TYPE_MEDIUM_BLOB or t == ffi.C.MYSQL_TYPE_LONG_BLOB )
    end
 
--- 19830905132800ULL  というようなFFIの値。 
+
 local time_ull_to_table =
-   function(ffiull)
+   function(ffiull)  -- 19830905132800ULL 
       local n = tonumber(ffiull)
       return { sec = math.floor(n)%100,
                min = math.floor(n/100)%100,
@@ -177,7 +177,7 @@ local mysql_query =
                   r = ffi.C.str_to_time( datestr, string.len(datestr), self.timeStruct, w )
                   llt = ffi.C.TIME_to_ulonglong( self.timeStruct )
                else
-                  r = ffi.C.str_to_datetime( datestr, string.len(datestr), self.timeStruct, 0, w ) --	1983-09-05 13:28:00
+                  r = ffi.C.str_to_datetime( datestr, string.len(datestr), self.timeStruct, 0, w )
                   if fdef.type == ffi.C.MYSQL_TYPE_DATE then
                      llt = ffi.C.TIME_to_ulonglong_date( self.timeStruct )
                      llt = llt * 100 * 100 * 100
