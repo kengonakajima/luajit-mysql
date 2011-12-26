@@ -1,0 +1,6 @@
+[submodule "deps/luajit-msgpack-pure"]
+	path = deps/luajit-msgpack-pure
+	url = git@github.com:kengonakajima/luajit-msgpack-pure.git
+[submodule "deps/pl"]
+	path = deps/pl
+	url = https://github.com/stevedonovan/Penlight
