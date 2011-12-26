@@ -1,4 +1,7 @@
 local ffi = require("ffi")
+local table = require("table")
+local string = require("string")
+local math = require( "math")
 
 ffi.cdef[[
       typedef void MYSQLwrap_t;
@@ -100,7 +103,10 @@ ffi.cdef[[
 ]]
 
 
-local clib = ffi.load( "libmysqlclient.dylib", true )                       
+local clib = pcall( function() ffi.load( "libmysqlclient.dylib", true ) end ) -- for normal luajit
+if not clib then
+   clib = ffi.load( "libmysqlclient386.dylib", true ) -- luvit is now built i386
+end
 assert(clib)
 
 local mysql_is_num_types =
@@ -197,7 +203,6 @@ local mysql_query =
    
       return restbl
    end
-
 
 local mysql_connect =
    function( self, host, user, password, db )

@@ -1,6 +1,9 @@
 -- simple test for luajit-mysql
 
-local mysql = require( "luajit-mysql" )
+local mysql = require( "./luajit-mysql" ) 
+local table = require( "table")
+local string = require( "string")
+
 
 local conn = mysql:connect( "127.0.0.1", "mysql", "", "test" )
 print("connect:", conn )
@@ -51,7 +54,7 @@ assert( row.name == nil )
 assert( row.age == nil )
 assert( row.email == nil )
 
--- integer test
+-- number test
 conn:query( "DROP TABLE IF EXISTS ints" )
 conn:query( "CREATE TABLE ints ( ti TINYINT, si SMALLINT, i INT, f FLOAT, d DOUBLE )" )
 conn:query( "INSERT INTO ints SET ti=100, si=10000, i=1000000, f=1.23, d=1.23 " )
