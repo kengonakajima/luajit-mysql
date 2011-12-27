@@ -6,7 +6,7 @@ Using FFI, pure Lua. so you don't have to build when install.
 
 How to Use
 ====
-See test.lua that includes hello world examples and tests on variables.
+See test.lua that includes hello world examples and tests on variable types.
 
 
 Requirements
