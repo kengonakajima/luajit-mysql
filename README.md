@@ -1,22 +1,26 @@
 MySQL binding for LuaJIT with FFI
 ====
+Using FFI, pure Lua. so you don't have to build when install. 
+(still requires libmysqlclient dynamic link object in environment)
+
+
+How to Use
+====
+See test.lua that includes hello world examples and tests on variable types.
+
 
 Requirements
 ====
+ - OSX: libmysqlclient.dylib (tested on mysql 5.1.59)
+ - Linux: (not tested yet)
 
- - OSX: libmysqlclient.dylib
- - Linux: (not implemented yet)
-
-Usage
+Limitations
 ====
- - Blocking interface
+Only supports blocking interface (libmysqlclient)
 
-    see test.lua .
 
- - Async interface (target on luvit)
 
-    to write
-
-Performance
+TODO
 ====
-to write
+ - linux test
+ - async : Tough. need to modify luvit, libuv 

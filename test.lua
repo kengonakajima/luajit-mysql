@@ -5,7 +5,7 @@ local table = require( "table")
 local string = require( "string")
 
 
-local conn = mysql:connect( "127.0.0.1", "mysql", "", "test" )
+local conn = mysql:connect( "127.0.0.1", "root", "", "luajit_mysql_test" )
 print("connect:", conn )
 
 conn:toggleLog(true)
@@ -70,12 +70,12 @@ assert( row.d == 1.23)
 conn:close()
 
 for i=1,10 do
-   conn = mysql:connect( "127.0.0.1", "mysql", "", "test" )
+   conn = mysql:connect( "127.0.0.1", "root", "", "luajit_mysql_test" )
    print("reconnect:", i, conn )
    conn:close()
 end
 
-conn = mysql:connect( "127.0.0.1", "mysql", "", "test" )
+conn = mysql:connect( "127.0.0.1", "root", "", "luajit_mysql_test" )
 conn:toggleLog(true)
 
 -- string and escape test

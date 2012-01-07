@@ -105,9 +105,16 @@ ffi.cdef[[
 
 local clib = pcall( function() ffi.load( "libmysqlclient.dylib", true ) end ) -- for normal luajit
 if not clib then
-   clib = ffi.load( "libmysqlclient386.dylib", true ) -- luvit is now built i386
+   clib = pcall( function() ffi.load( "libmysqlclient386.dylib", true ) end ) -- luvit is now built i386
 end
-assert(clib)
+if not clib then
+   clib = pcall( function() ffi.load( "/usr/lib/libmysqlclient.so.16", true ) end ) -- for linux
+end
+
+if not clib then
+   error( "cannot load libmysqlclient dynamic link library" )
+end
+
 
 local mysql_is_num_types =
    function(t)
