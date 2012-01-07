@@ -102,13 +102,16 @@ ffi.cdef[[
 
 ]]
 
-
-local clib = pcall( function() ffi.load( "libmysqlclient.dylib", true ) end ) -- for normal luajit
+print("try to load 64bit osx dylib..")
+local clib = pcall( function() ffi.load( "dllbin/libmysqlclient_x86_64_osx.dylib", true ) end ) -- for normal luajit
 if not clib then
-   clib = pcall( function() ffi.load( "libmysqlclient386.dylib", true ) end ) -- luvit is now built i386
+   print("try to load i386 osx dylib for luvit env..")
+   clib = pcall( function() ffi.load( "dllbin/libmysqlclient_i386_osx.dylib", true ) end ) -- luvit is now built i386
 end
+
 if not clib then
-   clib = pcall( function() ffi.load( "/usr/lib/libmysqlclient.so.16", true ) end ) -- for linux
+   print("try to load linux so..")
+   clib = pcall( function() ffi.load( "/usr/lib/libmysqlclient.so.16", true ) end ) -- for linux(ubuntu11)
 end
 
 if not clib then

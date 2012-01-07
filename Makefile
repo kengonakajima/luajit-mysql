@@ -1,0 +1,2 @@
+test:
+	luvit test.lua
