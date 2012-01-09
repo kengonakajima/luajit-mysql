@@ -1,5 +1,8 @@
 MySQL binding for LuaJIT with FFI
 ====
+<a href="http://travis-ci.org/kengonakajima/luajit-mysql"><img src="https://secure.travis-ci.org/kengonakajima/luajit-mysql.png"></a>
+
+
 Using FFI, pure Lua. so you don't have to build when install. 
 (still requires libmysqlclient dynamic link object in environment)
 
